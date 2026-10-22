@@ -1,0 +1,264 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Business Pilot AI | Admin Panel</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#0b1020;color:#f5f7ff;font-family:Arial,sans-serif}
+    .wrap{max-width:1100px;margin:auto;padding:24px}
+    h1{color:#80f0c0;margin-bottom:5px}
+    .muted{color:#aebbd3}
+    .card{background:#141c30;border:1px solid #293653;border-radius:16px;padding:22px;margin:18px 0}
+    input,select,button{width:100%;padding:12px;margin:7px 0;border-radius:9px;border:1px solid #354360;font:inherit}
+    input,select{background:#0c1426;color:white}
+    button{background:#55e0ad;color:#07150f;font-weight:bold;border:0;cursor:pointer}
+    button.secondary{background:#263653;color:white}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+    .status{background:#202c44;padding:12px;border-radius:9px;white-space:pre-wrap}
+    .customer{background:#0c1426;border:1px solid #293653;border-radius:12px;padding:16px;margin:12px 0;overflow-wrap:anywhere}
+    .hidden{display:none!important}
+    .tag{color:#80f0c0;font-weight:bold}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Business Pilot AI</h1>
+  <p class="muted">Administrator Control Center</p>
+  <div id="message" class="status">Connecting...</div>
+
+  <section id="login" class="card hidden">
+    <h2>Admin Login</h2>
+    <p class="muted">Sign in with your administrator account.</p>
+    <input id="email" type="email" placeholder="Admin email">
+    <input id="password" type="password" placeholder="Password">
+    <button id="loginBtn">Login to Admin Panel</button>
+  </section>
+
+  <section id="panel" class="hidden">
+    <div class="card">
+      <div class="grid">
+        <div>
+          <h2>Customer Management</h2>
+          <p id="adminEmail" class="muted"></p>
+        </div>
+        <div>
+          <button id="refreshBtn">Refresh Customers</button>
+          <button id="logoutBtn" class="secondary">Logout</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card"><p class="muted">Total Customers</p><h2 id="total">0</h2></div>
+      <div class="card"><p class="muted">Active Accounts</p><h2 id="active">0</h2></div>
+      <div class="card"><p class="muted">Pending Approval</p><h2 id="pending">0</h2></div>
+    </div>
+
+    <div class="card">
+      <h2>Customer Accounts</h2>
+      <input id="search" placeholder="Search by email..." />
+      <div id="customers"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const SUPABASE_URL = "https://yrqcaugdpjywmpydgkfa.supabase.co";
+const SUPABASE_KEY = "sb_publishable_7nhaiA9bU5TZEfrmwvFnXQ_Qr3YMaez";
+
+const $ = id => document.getElementById(id);
+let db;
+let allCustomers = [];
+
+function show(id) {
+  $("login").classList.toggle("hidden", id !== "login");
+  $("panel").classList.toggle("hidden", id !== "panel");
+}
+
+function say(text) {
+  $("message").textContent = text;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  })[c]);
+}
+
+async function init() {
+  if (!window.supabase) {
+    say("Supabase library failed to load. Check your internet connection.");
+    return;
+  }
+
+  db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  $("loginBtn").addEventListener("click", login);
+  $("refreshBtn").addEventListener("click", loadCustomers);
+  $("logoutBtn").addEventListener("click", logout);
+  $("search").addEventListener("input", renderCustomers);
+
+  const {data,error} = await db.auth.getSession();
+  if (error) {
+    say(error.message);
+    return;
+  }
+
+  if (data.session) {
+    await verifyAdmin();
+  } else {
+    show("login");
+    say("Log in with your admin account.");
+  }
+
+  db.auth.onAuthStateChange((event, session) => {
+    if (event === "SIGNED_OUT") {
+      show("login");
+      say("You have been logged out.");
+    }
+  });
+}
+
+async function login() {
+  const email = $("email").value.trim();
+  const password = $("password").value;
+
+  if (!email || !password) {
+    say("Enter your admin email and password.");
+    return;
+  }
+
+  say("Signing in...");
+  const {error} = await db.auth.signInWithPassword({email,password});
+
+  if (error) {
+    say("Login failed: " + error.message);
+    return;
+  }
+
+  await verifyAdmin();
+}
+
+async function verifyAdmin() {
+  say("Checking administrator permissions...");
+
+  const {data,error} = await db.rpc("is_admin");
+
+  if (error) {
+    await db.auth.signOut();
+    show("login");
+    say("Admin verification failed. Make sure the Supabase SQL setup has been completed. " + error.message);
+    return;
+  }
+
+  if (data !== true) {
+    await db.auth.signOut();
+    show("login");
+    say("Access denied. This account is not an administrator.");
+    return;
+  }
+
+  const {data:sessionData} = await db.auth.getSession();
+  $("adminEmail").textContent = sessionData.session?.user?.email || "";
+  show("panel");
+  await loadCustomers();
+}
+
+async function loadCustomers() {
+  say("Loading customer accounts...");
+
+  const {data,error} = await db.rpc("admin_list_customers");
+
+  if (error) {
+    say("Could not load customers: " + error.message);
+    return;
+  }
+
+  allCustomers = data || [];
+  $("total").textContent = allCustomers.length;
+  $("active").textContent = allCustomers.filter(c => c.account_status === "active").length;
+  $("pending").textContent = allCustomers.filter(c => c.account_status === "pending").length;
+
+  renderCustomers();
+  say("Customer list updated.");
+}
+
+function renderCustomers() {
+  const query = $("search").value.trim().toLowerCase();
+  const results = allCustomers.filter(c => (c.email || "").toLowerCase().includes(query));
+  const root = $("customers");
+  root.replaceChildren();
+
+  if (!results.length) {
+    root.textContent = "No customers found.";
+    return;
+  }
+
+  results.forEach(c => {
+    const card = document.createElement("div");
+    card.className = "customer";
+
+    card.innerHTML = `
+      <p><strong>${escapeHtml(c.email || "No email")}</strong></p>
+      <p>Account status: <span class="tag">${escapeHtml(c.account_status)}</span></p>
+      <p>Current plan: ${escapeHtml(c.plan || "none")}</p>
+      <p class="muted">User ID: ${escapeHtml(c.id)}</p>
+      <label>Account status</label>
+      <select class="statusSelect">
+        <option value="pending">Pending</option>
+        <option value="active">Active</option>
+        <option value="suspended">Suspended</option>
+      </select>
+      <label>Plan</label>
+      <select class="planSelect">
+        <option value="trial">Trial (7 days)</option>
+        <option value="monthly">Monthly (1 month)</option>
+        <option value="yearly">Yearly (1 year)</option>
+        <option value="none">No plan</option>
+      </select>
+      <button class="saveBtn">Save Account Changes</button>
+    `;
+
+    card.querySelector(".statusSelect").value = c.account_status || "pending";
+    card.querySelector(".planSelect").value = c.plan || "none";
+
+    card.querySelector(".saveBtn").addEventListener("click", async () => {
+      const status = card.querySelector(".statusSelect").value;
+      const plan = card.querySelector(".planSelect").value;
+
+      if (!confirm("Apply these changes to " + (c.email || "this customer") + "?")) return;
+
+      say("Updating customer account...");
+
+      const {error} = await db.rpc("admin_set_customer_access", {
+        p_user_id: c.id,
+        p_status: status,
+        p_plan: plan,
+        p_start: new Date().toISOString()
+      });
+
+      if (error) {
+        say("Update failed: " + error.message);
+        return;
+      }
+
+      say("Customer account updated.");
+      await loadCustomers();
+    });
+
+    root.appendChild(card);
+  });
+}
+
+async function logout() {
+  const {error} = await db.auth.signOut();
+  if (error) say("Logout failed: " + error.message);
+}
+
+init();
+</script>
+</body>
+</html>
