@@ -6,36 +6,126 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Business Pilot AI | Admin Panel</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
-    *{box-sizing:border-box}
-    body{margin:0;background:#0b1020;color:#f5f7ff;font-family:Arial,sans-serif}
-    .wrap{max-width:1100px;margin:auto;padding:24px}
-    h1{color:#80f0c0;margin-bottom:5px}
-    .muted{color:#aebbd3}
-    .card{background:#141c30;border:1px solid #293653;border-radius:16px;padding:22px;margin:18px 0}
-    input,select,button{width:100%;padding:12px;margin:7px 0;border-radius:9px;border:1px solid #354360;font:inherit}
-    input,select{background:#0c1426;color:white}
-    button{background:#55e0ad;color:#07150f;font-weight:bold;border:0;cursor:pointer}
-    button.secondary{background:#263653;color:white}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
-    .status{background:#202c44;padding:12px;border-radius:9px;white-space:pre-wrap}
-    .customer{background:#0c1426;border:1px solid #293653;border-radius:12px;padding:16px;margin:12px 0;overflow-wrap:anywhere}
-    .hidden{display:none!important}
-    .tag{color:#80f0c0;font-weight:bold}
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: #0b1020;
+      color: #f5f7ff;
+      font-family: Arial, sans-serif;
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: auto;
+      padding: 24px;
+    }
+
+    h1 { color: #80f0c0; margin-bottom: 5px; }
+    .muted { color: #aebbd3; }
+
+    .card {
+      background: #141c30;
+      border: 1px solid #293653;
+      border-radius: 16px;
+      padding: 22px;
+      margin: 18px 0;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      margin: 7px 0;
+      border-radius: 9px;
+      border: 1px solid #354360;
+      font: inherit;
+    }
+
+    input, select {
+      background: #0c1426;
+      color: white;
+    }
+
+    button {
+      background: #55e0ad;
+      color: #07150f;
+      font-weight: bold;
+      border: 0;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: wait;
+    }
+
+    button.secondary {
+      background: #263653;
+      color: white;
+    }
+
+    button.danger {
+      background: #9e3446;
+      color: white;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+    }
+
+    .status {
+      background: #202c44;
+      padding: 12px;
+      border-radius: 9px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .customer {
+      background: #0c1426;
+      border: 1px solid #293653;
+      border-radius: 12px;
+      padding: 16px;
+      margin: 12px 0;
+      overflow-wrap: anywhere;
+    }
+
+    .hidden { display: none !important; }
+    .tag { color: #80f0c0; font-weight: bold; }
+
+    @media (max-width: 600px) {
+      .wrap { padding: 12px; }
+      .card { padding: 16px; }
+    }
   </style>
 </head>
+
 <body>
 <div class="wrap">
   <h1>Business Pilot AI</h1>
   <p class="muted">Administrator Control Center</p>
-  <div id="message" class="status">Connecting...</div>
+
+  <div id="message" class="status" role="status" aria-live="polite">
+    Connecting to Supabase...
+  </div>
 
   <section id="login" class="card hidden">
     <h2>Admin Login</h2>
     <p class="muted">Sign in with your administrator account.</p>
-    <input id="email" type="email" placeholder="Admin email">
-    <input id="password" type="password" placeholder="Password">
-    <button id="loginBtn">Login to Admin Panel</button>
+
+    <label for="email">Email</label>
+    <input id="email" type="email" placeholder="Admin email"
+           autocomplete="username">
+
+    <label for="password">Password</label>
+    <input id="password" type="password" placeholder="Password"
+           autocomplete="current-password">
+
+    <button id="loginBtn" type="button">Login to Admin Panel</button>
   </section>
 
   <section id="panel" class="hidden">
@@ -46,47 +136,58 @@
           <p id="adminEmail" class="muted"></p>
         </div>
         <div>
-          <button id="refreshBtn">Refresh Customers</button>
-          <button id="logoutBtn" class="secondary">Logout</button>
+          <button id="refreshBtn" type="button">Refresh Customers</button>
+          <button id="logoutBtn" class="secondary" type="button">Logout</button>
         </div>
       </div>
     </div>
 
     <div class="grid">
-      <div class="card"><p class="muted">Total Customers</p><h2 id="total">0</h2></div>
-      <div class="card"><p class="muted">Active Accounts</p><h2 id="active">0</h2></div>
-      <div class="card"><p class="muted">Pending Approval</p><h2 id="pending">0</h2></div>
+      <div class="card">
+        <p class="muted">Total Customers</p>
+        <h2 id="total">0</h2>
+      </div>
+      <div class="card">
+        <p class="muted">Active Accounts</p>
+        <h2 id="active">0</h2>
+      </div>
+      <div class="card">
+        <p class="muted">Pending Approval</p>
+        <h2 id="pendingCount">0</h2>
+      </div>
     </div>
 
     <div class="card">
       <h2>Customer Accounts</h2>
-      <input id="search" placeholder="Search by email..." />
+      <input id="search" placeholder="Search by email...">
       <div id="customers"></div>
     </div>
   </section>
 </div>
 
 <script>
+"use strict";
+
 const SUPABASE_URL = "https://yrqcaugdpjywmpydgkfa.supabase.co";
 const SUPABASE_KEY = "sb_publishable_7nhaiA9bU5TZEfrmwvFnXQ_Qr3YMaez";
 
 const $ = id => document.getElementById(id);
-let db;
-let allCustomers = [];
 
-function show(id) {
-  $("login").classList.toggle("hidden", id !== "login");
-  $("panel").classList.toggle("hidden", id !== "panel");
-}
+let db = null;
+let allCustomers = [];
+let busy = false;
 
 function say(text) {
-  $("message").textContent = text;
+  $("message").textContent = String(text ?? "");
 }
 
-function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, c => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-  })[c]);
+function show(section) {
+  $("login").classList.toggle("hidden", section !== "login");
+  $("panel").classList.toggle("hidden", section !== "panel");
+}
+
+function setLoginBusy(value) {
+  $("loginBtn").disabled = value;
 }
 
 async function init() {
@@ -95,34 +196,46 @@ async function init() {
     return;
   }
 
-  db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  $("loginBtn").addEventListener("click", login);
-  $("refreshBtn").addEventListener("click", loadCustomers);
-  $("logoutBtn").addEventListener("click", logout);
-  $("search").addEventListener("input", renderCustomers);
+  try {
+    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  const {data,error} = await db.auth.getSession();
-  if (error) {
-    say(error.message);
-    return;
-  }
+    $("loginBtn").addEventListener("click", login);
+    $("refreshBtn").addEventListener("click", loadCustomers);
+    $("logoutBtn").addEventListener("click", logout);
+    $("search").addEventListener("input", renderCustomers);
 
-  if (data.session) {
-    await verifyAdmin();
-  } else {
-    show("login");
-    say("Log in with your admin account.");
-  }
+    const { data, error } = await db.auth.getSession();
 
-  db.auth.onAuthStateChange((event, session) => {
-    if (event === "SIGNED_OUT") {
+    if (error) {
       show("login");
-      say("You have been logged out.");
+      say("Could not check session: " + error.message);
+      return;
     }
-  });
+
+    if (data.session?.user) {
+      await verifyAdmin(data.session.user);
+    } else {
+      show("login");
+      say("Log in with your administrator account.");
+    }
+
+    db.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        allCustomers = [];
+        show("login");
+        say("You have been logged out.");
+      }
+    });
+
+  } catch (error) {
+    show("login");
+    say("Initialization failed: " + error.message);
+  }
 }
 
 async function login() {
+  if (!db || busy) return;
+
   const email = $("email").value.trim();
   const password = $("password").value;
 
@@ -131,64 +244,129 @@ async function login() {
     return;
   }
 
+  busy = true;
+  setLoginBusy(true);
   say("Signing in...");
-  const {error} = await db.auth.signInWithPassword({email,password});
 
-  if (error) {
-    say("Login failed: " + error.message);
-    return;
+  try {
+    const { data, error } = await db.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      say("Login failed: " + error.message);
+      return;
+    }
+
+    if (!data.user) {
+      say("Login succeeded, but no user information was returned.");
+      return;
+    }
+
+    await verifyAdmin(data.user);
+
+  } catch (error) {
+    say("Login failed: " + (error.message || "Please try again."));
+  } finally {
+    busy = false;
+    setLoginBusy(false);
   }
-
-  await verifyAdmin();
 }
 
-async function verifyAdmin() {
+/*
+  Verify the currently authenticated user's own profile.
+  This avoids calling the missing is_admin() RPC.
+  The profiles table must allow authenticated users to read their own row.
+*/
+async function verifyAdmin(user) {
   say("Checking administrator permissions...");
 
-  const {data,error} = await db.rpc("is_admin");
+  try {
+    const { data: profile, error } = await db
+      .from("profiles")
+      .select("id,email,role")
+      .eq("id", user.id)
+      .maybeSingle();
 
-  if (error) {
-    await db.auth.signOut();
+    if (error) {
+      show("login");
+      say("Could not verify your profile: " + error.message);
+      return;
+    }
+
+    if (!profile) {
+      show("login");
+      say(
+        "Your profile was not found. Check that your Supabase signup trigger " +
+        "created a row in public.profiles."
+      );
+      return;
+    }
+
+    if (profile.role !== "admin") {
+      show("login");
+      say(
+        "Access denied. This account is not an administrator. " +
+        "Set role = admin for your account in Supabase after verifying your identity."
+      );
+      await db.auth.signOut();
+      return;
+    }
+
+    $("adminEmail").textContent = user.email || profile.email || "";
+    show("panel");
+
+    await loadCustomers();
+
+  } catch (error) {
     show("login");
-    say("Admin verification failed. Make sure the Supabase SQL setup has been completed. " + error.message);
-    return;
+    say("Admin verification failed: " + (error.message || "Try again."));
   }
-
-  if (data !== true) {
-    await db.auth.signOut();
-    show("login");
-    say("Access denied. This account is not an administrator.");
-    return;
-  }
-
-  const {data:sessionData} = await db.auth.getSession();
-  $("adminEmail").textContent = sessionData.session?.user?.email || "";
-  show("panel");
-  await loadCustomers();
 }
 
 async function loadCustomers() {
+  if (!db) return;
+
+  $("refreshBtn").disabled = true;
   say("Loading customer accounts...");
 
-  const {data,error} = await db.rpc("admin_list_customers");
+  try {
+    // This RPC must exist in Supabase and enforce admin permissions.
+    const { data, error } = await db.rpc("admin_list_customers");
 
-  if (error) {
-    say("Could not load customers: " + error.message);
-    return;
+    if (error) {
+      say(
+        "Could not load customers: " + error.message +
+        "\nCheck that admin_list_customers() exists and grants access only to admins."
+      );
+      return;
+    }
+
+    allCustomers = Array.isArray(data) ? data : [];
+
+    $("total").textContent = allCustomers.length;
+    $("active").textContent =
+      allCustomers.filter(c => c.account_status === "active").length;
+    $("pendingCount").textContent =
+      allCustomers.filter(c => c.account_status === "pending").length;
+
+    renderCustomers();
+    say("Customer list updated.");
+
+  } catch (error) {
+    say("Could not load customers: " + (error.message || "Try again."));
+  } finally {
+    $("refreshBtn").disabled = false;
   }
-
-  allCustomers = data || [];
-  $("total").textContent = allCustomers.length;
-  $("active").textContent = allCustomers.filter(c => c.account_status === "active").length;
-  $("pending").textContent = allCustomers.filter(c => c.account_status === "pending").length;
-
-  renderCustomers();
-  say("Customer list updated.");
 }
 
 function renderCustomers() {
   const query = $("search").value.trim().toLowerCase();
-  const results = allCustomers.filter(c => (c.email || "").toLowerCase().includes(query));
+  const results = allCustomers.filter(c =>
+    String(c.email || "").toLowerCase().includes(query)
+  );
+
   const root = $("customers");
   root.replaceChildren();
 
@@ -197,65 +375,132 @@ function renderCustomers() {
     return;
   }
 
-  results.forEach(c => {
+  results.forEach(customer => {
     const card = document.createElement("div");
     card.className = "customer";
 
-    card.innerHTML = `
-      <p><strong>${escapeHtml(c.email || "No email")}</strong></p>
-      <p>Account status: <span class="tag">${escapeHtml(c.account_status)}</span></p>
-      <p>Current plan: ${escapeHtml(c.plan || "none")}</p>
-      <p class="muted">User ID: ${escapeHtml(c.id)}</p>
-      <label>Account status</label>
-      <select class="statusSelect">
-        <option value="pending">Pending</option>
-        <option value="active">Active</option>
-        <option value="suspended">Suspended</option>
-      </select>
-      <label>Plan</label>
-      <select class="planSelect">
-        <option value="trial">Trial (7 days)</option>
-        <option value="monthly">Monthly (1 month)</option>
-        <option value="yearly">Yearly (1 year)</option>
-        <option value="none">No plan</option>
-      </select>
-      <button class="saveBtn">Save Account Changes</button>
-    `;
+    const heading = document.createElement("p");
+    const strong = document.createElement("strong");
+    strong.textContent = customer.email || "No email";
+    heading.appendChild(strong);
+    card.appendChild(heading);
 
-    card.querySelector(".statusSelect").value = c.account_status || "pending";
-    card.querySelector(".planSelect").value = c.plan || "none";
+    const statusText = document.createElement("p");
+    statusText.append("Account status: ");
 
-    card.querySelector(".saveBtn").addEventListener("click", async () => {
-      const status = card.querySelector(".statusSelect").value;
-      const plan = card.querySelector(".planSelect").value;
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.textContent = customer.account_status || "unknown";
+    statusText.appendChild(tag);
+    card.appendChild(statusText);
 
-      if (!confirm("Apply these changes to " + (c.email || "this customer") + "?")) return;
+    const planText = document.createElement("p");
+    planText.textContent = "Current plan: " + (customer.plan || "none");
+    card.appendChild(planText);
 
-      say("Updating customer account...");
+    const idText = document.createElement("p");
+    idText.className = "muted";
+    idText.textContent = "User ID: " + (customer.id || "");
+    card.appendChild(idText);
 
-      const {error} = await db.rpc("admin_set_customer_access", {
-        p_user_id: c.id,
-        p_status: status,
-        p_plan: plan,
-        p_start: new Date().toISOString()
-      });
+    const statusLabel = document.createElement("label");
+    statusLabel.textContent = "Account status";
+    card.appendChild(statusLabel);
 
-      if (error) {
-        say("Update failed: " + error.message);
+    const statusSelect = document.createElement("select");
+    statusSelect.className = "statusSelect";
+
+    [
+      ["pending", "Pending"],
+      ["active", "Active"],
+      ["suspended", "Suspended"]
+    ].forEach(([value, label]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      statusSelect.appendChild(option);
+    });
+
+    statusSelect.value = customer.account_status || "pending";
+    card.appendChild(statusSelect);
+
+    const planLabel = document.createElement("label");
+    planLabel.textContent = "Plan";
+    card.appendChild(planLabel);
+
+    const planSelect = document.createElement("select");
+    planSelect.className = "planSelect";
+
+    [
+      ["trial", "Trial (7 days)"],
+      ["monthly", "Monthly (1 month)"],
+      ["yearly", "Yearly (1 year)"],
+      ["none", "No plan"]
+    ].forEach(([value, label]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      planSelect.appendChild(option);
+    });
+
+    planSelect.value = customer.plan || "none";
+    card.appendChild(planSelect);
+
+    const saveButton = document.createElement("button");
+    saveButton.textContent = "Save Account Changes";
+    saveButton.type = "button";
+
+    saveButton.addEventListener("click", async () => {
+      const status = statusSelect.value;
+      const plan = planSelect.value;
+
+      if (!confirm("Apply these changes to " + (customer.email || "this customer") + "?")) {
         return;
       }
 
-      say("Customer account updated.");
-      await loadCustomers();
+      saveButton.disabled = true;
+      say("Updating customer account...");
+
+      try {
+        /*
+          This RPC must exist in Supabase.
+          It must validate admin permissions server-side.
+        */
+        const { error } = await db.rpc("admin_set_customer_access", {
+          p_user_id: customer.id,
+          p_status: status,
+          p_plan: plan,
+          p_start: new Date().toISOString()
+        });
+
+        if (error) {
+          say("Update failed: " + error.message);
+          return;
+        }
+
+        say("Customer account updated successfully.");
+        await loadCustomers();
+
+      } catch (error) {
+        say("Update failed: " + (error.message || "Please try again."));
+      } finally {
+        saveButton.disabled = false;
+      }
     });
 
+    card.appendChild(saveButton);
     root.appendChild(card);
   });
 }
 
 async function logout() {
-  const {error} = await db.auth.signOut();
-  if (error) say("Logout failed: " + error.message);
+  if (!db) return;
+
+  const { error } = await db.auth.signOut();
+
+  if (error) {
+    say("Logout failed: " + error.message);
+  }
 }
 
 init();
